@@ -1,3 +1,8 @@
+"""
+    -p piazza_credentials: piazza_credentials.json
+    -t thread_string:
+    -f filter_string:
+"""
 import sys
 import getopt
 import json
@@ -6,7 +11,7 @@ from piazza_api import Piazza
 
 class PiazzaInterface:
 
-    def __init__(self, piazza_credentials, filters, debug=False):
+    def __init__(self, piazza_credentials):
         _piazza = Piazza()
         _piazza.user_login(email=email, password=password)
         self._myclass = _piazza.network(network)
@@ -65,28 +70,50 @@ class PiazzaInterface:
         return _parsePost
 
 
+def _parse_thread_string():
+
 def main(argv):
 
-    parameters = {
-                    'verbose': False,
-                    'frames': "ExampleQuestions.json",
-                    'log': "results"
-                 }
+    _parameters = {
+                    'piazza_credentials': "piazza_credentials.json",
+                    'thread_string': ""
+                    'filter_string': ""
+                  }
 
     print(__doc__)
     try:
-        opts, args = getopt.getopt(argv, "vf:l:")
+        _opts, _args = getopt.getopt(argv, "p:t:f:")
     except getopt.GetoptError:
         sys.exit(1)
-    for opt, arg in opts:
-        if opt in ("-v"):  # -v verbose
-            parameters['verbose'] = True
-        elif opt in ("-f"):  # -f <json containing dictionary frames>
-            parameters['frames'] = arg
-        elif opt in ("-l"):  # -l <path/filename to log file>
-            parameters['log'] = arg
+    for _opt, _arg in _opts:
+        if _opt in ("-p"):
+            _parameters['piazza_credentials'] = _arg
+        elif _opt in ("-t"):
+            _parameters['thread_string'] = _arg
+        elif _opt in ("-f"):
+            _parameters['filter_string'] = _arg
 
-    return AgentAutograder(parameters)
+    # Load config file
+    try:
+        with open(_parameters['piazza_credentials'], encoding='utf-8') as _json_data:
+                _piazza_credentials = json.load(_json_data)
+    except FileNotFoundError as _err:
+        print("Failure opening or reading piazza credentials filename: " + str(_err))
+        return -1
+
+    # Open connection to Piazza
+    try:
+        _piazza_interface = PiazzaInterface()
+    except Exception as _err:
+        print("Failure connecting to Piazza: " + str(_err))
+        return -1
+
+
+
+
+ _threads = [_piazza_interface.get_post_by_subject(thread) for thread in _list_of_thread_names]
+
+    return Piazza(parameters)
 
 
 if __name__ == '__main__':
