@@ -1,7 +1,15 @@
 """
-    -p piazza_credentials: piazza_credentials.json
-    -t thread_string:
-    -f filter_string:
+Backup or Mine Piazza for data.
+
+Use the -b option to backup a Piazza network.
+Use the -m option to mine the backup file for data.
+    -b backup Piazza network to file
+        - e = Piazza user email
+        - p = Piazza user password
+        - n = Piazza network
+
+    -m mine data from Pizza backup file
+        - t mine a specific thread
 """
 import sys
 import getopt
@@ -79,9 +87,10 @@ def main(argv):
 
     print(__doc__)
     try:
-        _opts, _args = getopt.getopt(argv, "p:t:f:b:")
+        _opts, _args = getopt.getopt(argv, "b:m:e:p:n:t:")
     except getopt.GetoptError:
         sys.exit(1)
+    
     for _opt, _arg in _opts:
         if _opt in ("-p"):
             _parameters['piazza_credentials'] = _arg
