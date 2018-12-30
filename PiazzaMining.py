@@ -25,10 +25,15 @@ class ThreadNotFoundError(Error):
     """Thread not found"""
     pass
 
+class InstructorIDNotFoundError(Error):
+    """Instructor ID's not found"""
+    pass
+
 
 class PiazzaInterface:
 
     def __init__(self, piazza_credentials):
+        """Connect to Piazza"""
         _piazza = Piazza()
         _piazza.user_login( email=piazza_credentials['piazza_email'], 
                             password=piazza_credentials['piazza_password'])
@@ -38,6 +43,7 @@ class PiazzaInterface:
         self._instructor_ids = [user['id'] for user in self._myclass.get_all_users() if user['admin'] == True]
 
     def get_all_posts(self):
+        """Get all posts"""
         _ids = [_post['id'] for _post in self._feed['feed']]
         _posts = []
         for _id in _ids:
@@ -52,15 +58,33 @@ class PiazzaInterface:
 
 
 def error_message(message):
+    """Error message"""
     print("!ERROR! - "+message)
 
+def get_instructor_ids(piazza):
+    """Get list of instructor id's"""
+    for _post in piazza:
+        if 'mining_instructors' in _post:
+            return _post['mining_instructors']
+    raise InstructorIDNotFoundError()
+
 def get_thread_by_subject(piazza,thread_subject):
+    """Look for thread with specified subject"""
     for _post in piazza:
         if 'history' in _post:
             _subject = _post['history'][0]['subject']
             if thread_subject == _subject:
                 return _post
     raise ThreadNotFoundError()
+
+def process_change_log(change_log,instructor_ids):
+    """Get most recent change log in each post"""
+    for _entry in change_log:
+        print(_entry)
+        if _entry['uid'] in instructor_ids:
+            print("instructor")
+        else:
+            print("student")
 
 
 def main(argv):
@@ -153,7 +177,9 @@ def main(argv):
             print("Thread not found")
             return -1
         print("Thread found")
-
+        _instructor_ids = get_instructor_ids(_piazza)
+        if 'change_log' in _post:
+            process_change_log(_post['change_log'], _instructor_ids)
 
     return 0
 
