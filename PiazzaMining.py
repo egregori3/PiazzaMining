@@ -17,10 +17,6 @@ import json
 from piazza_api import Piazza
 
 
-class PiazzaError(Exception):
-    def __init__(self, message):
-        self.message = message
-
 
 class PiazzaInterface:
 
@@ -33,29 +29,21 @@ class PiazzaInterface:
         self._feed = self._myclass.get_feed(limit=999999, offset=0)['feed']
         self._instructor_ids = [user['id'] for user in self._myclass.get_all_users() if user['admin'] == True]
 
-    def get_post_by_subject(self, subject):
-        for _post in self._feed:
-            if _post['subject'] == subject:
-                return self._myclass.get_post(_post['id'])
-        raise PiazzaError("Could not get post '{0}'".format(subject))
-
-    def get_followups(self, thread):
-        if thread:
-            for followup in thread['children']:
-                if followup['type'] != 'followup':
-                    continue
-
-                print(str(followup))
-
     def get_all_posts(self):
         _ids = [_post['id'] for _post in self._feed]
         _posts = []
         for _id in _ids:
+            print("-", end='')
+            sys.stdout.flush()
             _post = self._myclass.get_post(_id)
             _posts.append(_post)
+        print()
         return _posts
 
-    def parsePost(self, post):
+
+
+"""
+def parsePost(self, post):
         _parsePost = {}
         if post['type'] == "question":
             _id = post['id']
@@ -71,85 +59,118 @@ class PiazzaInterface:
         return _parsePost
 
 
+def get_post_by_subject(self, subject):
+        for _post in self._feed:
+            if _post['subject'] == subject:
+                return self._myclass.get_post(_post['id'])
+        raise PiazzaError("Could not get post '{0}'".format(subject))
+
+def get_followups(self, thread):
+        if thread:
+            for followup in thread['children']:
+                if followup['type'] != 'followup':
+                    continue
+
+                print(str(followup))
+
+
+
 def _parse_thread_string(thread_string):
     _list_of_thread_names = thread_string.split(',')
     return _list_of_thread_names
+"""
+
+def error_message(message):
+    print("!ERROR! - "+message)
+
 
 
 def main(argv):
+    """
+        -b backup Piazza network to file
+        - e = Piazza user email
+        - p = Piazza user password
+        - n = Piazza network
 
-    _parameters = {
-                    'piazza_credentials': "piazza_credentials.json",
-                    'thread_string': "",
-                    'filter_string': "",
-                    'backup_file': ""
-                  }
-
+        -m mine data from Pizza backup file
+        - t mine a specific thread
+    """
+    _parameters = dict()
     print(__doc__)
     try:
         _opts, _args = getopt.getopt(argv, "b:m:e:p:n:t:")
     except getopt.GetoptError:
         sys.exit(1)
-    
     for _opt, _arg in _opts:
-        if _opt in ("-p"):
-            _parameters['piazza_credentials'] = _arg
+        if _opt in ("-b"):
+            _parameters['option_b'] = _arg
+        elif _opt in ("-m"):
+            _parameters['option_m'] = _arg
+        elif _opt in ("-e"):
+            _parameters['option_e'] = _arg
+        elif _opt in ("-p"):
+            _parameters['option_p'] = _arg
+        elif _opt in ("-n"):
+            _parameters['option_n'] = _arg
         elif _opt in ("-t"):
-            _parameters['thread_string'] = _arg
-        elif _opt in ("-f"):
-            _parameters['filter_string'] = _arg
-        elif _opt in ("-b"):
-            _parameters['backup_file'] = _arg
+            _parameters['option_t'] = _arg
 
-    # Load config file
-    try:
-        with open(_parameters['piazza_credentials'], encoding='utf-8') as _json_data:
-                _piazza_credentials = json.load(_json_data)
-    except Exception as _err:
-        print("Failure opening or reading piazza credentials filename: " + str(_err))
-        return -1
-
-    # Open connection to Piazza
-    try:
-        _piazza_interface = PiazzaInterface(_piazza_credentials)
-    except Exception as _err:
-        print("Failure connecting to Piazza: " + str(_err))
-        return -1
-
-    try:
-        _list_of_thread_names = _parse_thread_string(_parameters['thread_string'])
-    except Exception as _err:
-        print("Failure parsing thread parameter: " + str(_err))
-        return -1
-
-    print("Getting threads: "+str(_list_of_thread_names))
-
-    if _list_of_thread_names[0]:
+    if 'option_b' in _parameters:
+        _filename = _parameters['option_b']
+        _piazza_credentials = dict()
         try:
-            _posts = [_piazza_interface.get_post_by_subject(thread) for thread in _list_of_thread_names]
+            _piazza_credentials['piazza_email'] = _parameters['option_e']
+            _piazza_credentials['piazza_password'] = _parameters['option_p']
+            _piazza_credentials['piazza_network']  = _parameters['option_n']
         except Exception as _err:
-            print("Failure getting posts by thread: " + str(_err))
+            error_message("Invalid Piazza credentials: " + str(_err))
             return -1
-    else:
+
+        print("Connecting to Piazza")
+        try:
+            _piazza_interface = PiazzaInterface(_piazza_credentials)
+        except Exception as _err:
+            error_message("Failure connecting to Piazza: " + str(_err))
+            return -1
+
+        print("Getting posts")
         try:
             _posts = _piazza_interface.get_all_posts()
         except Exception as _err:
-            print("Failure getting all posts: " + str(_err))
+            error_message("Failure getting all posts: " + str(_err))
             return -1
 
-
-    if _parameters['backup_file']:
+        print("Writing posts to file: "+_filename)
         try:
-            with open(_parameters['backup_file'], 'w') as outfile:
+            with open(_filename, 'w') as outfile:
                 json.dump(_posts, outfile)
         except Exception as _err:
-            print("Failure writing to bckup JSON file: " + str(_err))
+            error_message("Failure writing to file: " + str(_err))
             return -1
+        print("Done")
+        return 0
 
-#    _followup_threads = [_piazza_interface.get_followups(thread) for thread in _threads]
+    # option b not set
+    try:
+        _filename = _parameters['option_m']
+    except:
+        error_message("option -b or -m MUST be set")
+        return -1
 
-#    for _thread in _threads:
-#        print(str(_thread))
+    print("Mining: "+_filename)
+    try:
+        with open(_filename, encoding='utf-8') as _json_data:
+            _piazza = json.load(_json_data)
+    except Exception as _err:
+        error_message("Failure opening or reading piazza file: " + str(_err))
+        return -1
+
+    print("Piazza file loaded")
+    if 'option_t' in _parameters:
+        _thread = _parameters['option_t']
+        pass
+
+
 
     return 0
 
