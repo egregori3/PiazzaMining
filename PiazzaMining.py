@@ -17,6 +17,14 @@ import json
 from piazza_api import Piazza
 
 
+class Error(Exception):
+   """Base class for other exceptions"""
+   pass
+
+class ThreadNotFoundError(Error):
+    """Thread not found"""
+    pass
+
 
 class PiazzaInterface:
 
@@ -26,63 +34,33 @@ class PiazzaInterface:
                             password=piazza_credentials['piazza_password'])
         self._myclass = _piazza.network(piazza_credentials['piazza_network'])
         # Get list of cid's from feed
-        self._feed = self._myclass.get_feed(limit=999999, offset=0)['feed']
+        self._feed = self._myclass.get_feed(limit=999999, offset=0)
         self._instructor_ids = [user['id'] for user in self._myclass.get_all_users() if user['admin'] == True]
 
     def get_all_posts(self):
-        _ids = [_post['id'] for _post in self._feed]
+        _ids = [_post['id'] for _post in self._feed['feed']]
         _posts = []
         for _id in _ids:
             print("-", end='')
             sys.stdout.flush()
             _post = self._myclass.get_post(_id)
             _posts.append(_post)
+        _posts.append({'mining_feed':self._feed})
+        _posts.append({'mining_instructors':self._instructor_ids})
         print()
         return _posts
 
 
-
-"""
-def parsePost(self, post):
-        _parsePost = {}
-        if post['type'] == "question":
-            _id = post['id']
-            _domains = post['folders'] 
-            _subject = post['history'][-1]['subject']
-            _content = post['history'][-1]['content']
-            _instructor_answer = ""
-            for _child in post['children']:
-                if _child['type'] == "i_answer":
-                   _instructor_answer = _child['history'][-1]['content']
-                break
-            _parsePost = self._postData(_id, _domains, _subject, _content, _instructor_answer)
-        return _parsePost
-
-
-def get_post_by_subject(self, subject):
-        for _post in self._feed:
-            if _post['subject'] == subject:
-                return self._myclass.get_post(_post['id'])
-        raise PiazzaError("Could not get post '{0}'".format(subject))
-
-def get_followups(self, thread):
-        if thread:
-            for followup in thread['children']:
-                if followup['type'] != 'followup':
-                    continue
-
-                print(str(followup))
-
-
-
-def _parse_thread_string(thread_string):
-    _list_of_thread_names = thread_string.split(',')
-    return _list_of_thread_names
-"""
-
 def error_message(message):
     print("!ERROR! - "+message)
 
+def get_thread_by_subject(piazza,thread_subject):
+    for _post in piazza:
+        if 'history' in _post:
+            _subject = _post['history'][0]['subject']
+            if thread_subject == _subject:
+                return _post
+    raise ThreadNotFoundError()
 
 
 def main(argv):
@@ -167,9 +145,14 @@ def main(argv):
 
     print("Piazza file loaded")
     if 'option_t' in _parameters:
-        _thread = _parameters['option_t']
-        pass
-
+        _thread_subject = _parameters['option_t']
+        print("Looking for thread: "+_thread_subject)
+        try:
+            _post = get_thread_by_subject(_piazza,_thread_subject)
+        except ThreadNotFoundError:
+            print("Thread not found")
+            return -1
+        print("Thread found")
 
 
     return 0
