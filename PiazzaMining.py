@@ -41,8 +41,9 @@ def main(argv):
     _parameters = dict()
     print(__doc__)
     try:
-        _opts, _args = getopt.getopt(argv, "b:m:e:p:n:t:s:")
+        _opts, _args = getopt.getopt(argv, "b:m:e:p:n:t:s")
     except getopt.GetoptError:
+        error_message("Command Line")
         sys.exit(1)
     for _opt, _arg in _opts:
         if _opt in ("-b"):
@@ -80,7 +81,6 @@ def main(argv):
             error_message(str(_err))
         return 0
 
-
     # option b not set
     try:
         _filename = _parameters['option_m']
@@ -95,6 +95,7 @@ def main(argv):
     try:
         _piazza_mine = PiazzaMine(_filename)
         _instructor_ids = _piazza_mine.get_instructor_ids()
+        _data = _piazza_mine.get_posts()
     except PiazzaError as _err:
         print(str(_err))
         return -1
@@ -107,7 +108,7 @@ def main(argv):
         _thread_subject = _parameters['option_t']
         print("Looking for thread: "+_thread_subject)
         try:
-            _post = _piazza_mine.get_thread_by_subject(_thread_subject)
+            _data = _piazza_mine.get_thread_by_subject(_thread_subject)
         except PiazzaError as _err:
             print(str(_err))
             return -1
@@ -119,10 +120,11 @@ def main(argv):
     if 'option_s' in _parameters:
         print("Display statistics")
         try:
-            _filter = ProcessChangeLog.Filter(_post, _instructor_ids)
-        except FilterError as _err:
+            _filter = Statistics(_data, _instructor_ids)
+        except StatisticsError as _err:
             print(str(_err))
             return -1
+        _filter.print_statistics()
 
     return 0
 

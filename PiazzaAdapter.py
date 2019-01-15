@@ -12,7 +12,13 @@ class PiazzaError(Exception):
 
 
 class PiazzaBackup:
-    """Save Piazza network to json file"""
+    """
+        Save Piazza network to json file
+        File is a list of dictionaries.
+        Each dictionary is a post.
+        dict [-2] is feed
+        dict [-1] is instructors
+    """
 
     def __init__(self, filename, piazza_credentials):
         print("Connecting to Piazza")
@@ -79,12 +85,18 @@ class PiazzaMine:
         if not self.instructor_ids:
             raise PiazzaError("Instructor ID Not Found Error")
 
+    def get_posts(self):
+        return self.piazza
+
     def get_instructor_ids(self):
         """Get list of instructor id's"""
         return self.instructor_ids
 
-    def get_thread_by_subject(self):
-        """Look for thread with specified subject"""
+    def get_thread_by_subject(self, thread_subject):
+        """
+            Walk through list looking for a specific dictionary based on subject.
+            Returns dictionary if thread found.
+        """
         for _post in self.piazza:
             if 'history' in _post:
                 _subject = _post['history'][0]['subject']
